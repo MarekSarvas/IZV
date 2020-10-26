@@ -25,10 +25,11 @@ C = ['p1', 'p36', 'p37', 'p2a', 'weekday(p2a)', 'p2b-hour', 'p2b-minute', 'p6', 
 C_LEN = 65
 strings = [0, 3, 63, 60, 59, 56, 55, 52, 53, 57]
 floats = [51, 50, 49, 48, 46, 47]
-
+ints = [1,2,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,
+        41,42,43,44,45,54,57,58,61,62,63,64]
 
 class DataDownloader:
-    def __init__(self, url='https://ehw.fit.vutbr.cz/izv/', folder='data2', cache_filename='data_{}.pkl.gz',
+    def __init__(self, url='https://ehw.fit.vutbr.cz/izv/', folder='dataz', cache_filename='data_{}.pkl.gz',
                  header=None):
         if header is None:
             self.header = HEADER
@@ -62,14 +63,24 @@ class DataDownloader:
 
         reg_code = self.region_codes.get(region)[0]
         csv_file = self.region_codes.get(region)[1]
+        dat2 = []
+        rows = 0
+        for zip_file in glob.glob(self.folder + '/*.zip'):
+            with ZipFile(zip_file) as zf:
+                with zf.open(self.region_codes.get(region)[1], "r") as csv_raw:
+                    csv_wrap = TextIOWrapper(csv_raw, encoding='ISO-8859-2')
+                    csv_r = csv.reader(csv_wrap, delimiter=';', quotechar='"')
 
-        for csv_path in glob.glob(self.folder + '/*/*.csv'):
-            if csv_file == csv_path.split("/")[-1]:
-                with open(csv_path, "r", encoding='ISO-8859-2') as f:
-                    csv_r = csv.reader(f, delimiter=';', quotechar='"')
 
-                    rows = len(f.readlines())
-                    f.seek(0)
+
+ #       for csv_path in glob.glob(self.folder + '/*/*.csv'):
+  #          if csv_file == csv_path.split("/")[-1]:
+  #              with open(csv_path, "r", encoding='ISO-8859-2') as f:
+  #                  csv_r = csv.reader(f, delimiter=';', quotechar='"')
+
+                    rows = len(list(csv_r))
+                    csv_raw.seek(0)
+
                     for r in range(C_LEN):
                         if r in strings:
                             data_list.append(np.empty(rows, dtype='<U32'))
@@ -77,37 +88,51 @@ class DataDownloader:
                             data_list.append(np.empty(rows, dtype=float))
                         else:
                             data_list.append(np.empty(rows, dtype=int))
-
+                    tmp = np.empty(rows, dtype='<U3')
+                    tmp[:] = region
                     current_row = 0
                     for row in csv_r:
-                        self.format_line(row, data_list, current_row)
+                        # self.format_line(row, data_list, current_row)
+                        self.format_line2(row, data_list, current_row)
+                        #dat2.append(row.copy())
                         current_row += 1
+                data_list.insert(0, tmp.copy())
 
                 if not finale_data:
                     finale_data = data_list.copy()
                 else:
                     for i in range(C_LEN):
                         finale_data[i] = np.concatenate((finale_data[i], data_list[i]))
-                data_list = []
 
+                data_list = []
         """
-        for zip_file in glob.glob(self.folder + '/*.zip'):
-            with ZipFile(zip_file) as zf:
-                with zf.open(self.region_codes.get(region)[1], "r") as csv_raw:
-                    csv_wrap = TextIOWrapper(csv_raw, encoding='ISO-8859-2')
-                    csv_r = csv.reader(csv_wrap, delimiter=';', quotechar='"')
-                    for row in csv_r:
+        dat2 = np.array(dat2)
+        
+        for r in range(C_LEN):
+            if r in strings:
+                a = np.empty(rows, dtype='<U32')
+            elif r in floats:
+                a = np.empty(rows, dtype=float)
+            else:
+                a = np.empty(rows, dtype=int)
+
+            a[:] = dat2[:, r]
+            data_list.append(a.copy())
         """
+        #print(len(data_list))
+        #print(data_list[0].shape)
+        #return data_list
+        print(len(finale_data))
+        print(finale_data[0].shape)
         # return col_head, data_list
 
     def format_line(self, data, data_list, j):
         data.insert(6, self.int_nan)  # placeholder cause time is changed from
+        time = data[5]
         for i in range(C_LEN):
             if i == 5:
-                time = data[5]
                 data_list[i][j] = (lambda x: x if int(x) < 25 else self.int_nan)(time[:2])
             elif i == 6:
-                time = data[5]
                 data_list[i][j] = (lambda x: x if int(x) < 25 else self.int_nan)(time[2:])
             elif i in floats:
                 try:
@@ -124,12 +149,38 @@ class DataDownloader:
 
         return 1
 
+    def format_line2(self, data, data_list, j):
+        data.insert(6, self.int_nan)  # placeholder cause time is changed from
+        time = data[5]
+        data_list[5][j] = (lambda x: x if int(x) < 25 else self.int_nan)(time[:2])
+        data_list[6][j] = (lambda x: x if int(x) < 25 else self.int_nan)(time[2:])
+        for i in floats:
+            try:
+                data_list[i][j] = data[i].replace(',', '.')
+            except ValueError:
+                data_list[i][j] = self.int_nan
+        for i in ints:
+            #print(i, j)
+            try:
+
+                #print(len(data))
+                #a = data[i]
+               # #print(len(data))
+                #print("FUCK")
+               # b = [data_list[i][j]]
+                data_list[i][j] = data[i]
+            except ValueError:
+                data_list[i][j] = self.int_nan
+
+        return 1
+
+
     def get_list(self, regions=None):
         if not regions:
             for k, v in self.region_codes.items():
                 self.parse_region_data(k)
         else:
-            pass
+            self.parse_region_data(regions)
 
 if __name__ == "__main__":
     a = DataDownloader()
