@@ -1,5 +1,3 @@
-import re
-import sys
 from io import BytesIO, TextIOWrapper
 import glob
 import requests
@@ -19,14 +17,18 @@ HEADER = {
     'Upgrade-Insecure-Requests': '1',
 }
 
-COLUMN_HEADER = ['p1', 'p36', 'p37', 'p2a', 'weekday(p2a)', 'p2b-hour', 'p2b-minute', 'p6',
-                 'p7', 'p8', '9', 'p10', 'p11', 'p12', 'p13a', 'p13b', 'p13c', 'p14', 'p15', 'p16', 'p17', 'p18', 'p19',
-                 'p20', 'p21', 'p22', 'p23', 'p24', 'p27', 'p28', 'p34', 'p35', 'p39', 'p44', 'p45a', 'p47', 'p48a',
-                 'p49', 'p50a', 'p50b', 'p51', 'p52', 'p53', 'p55a', 'p57', 'p58', 'd', 'e', 'p5a']
+C = ['p1', 'p36', 'p37', 'p2a', 'weekday(p2a)', 'p2b-hour', 'p2b-minute', 'p6', 'p7', 'p8', 'p9', 'p10', 'p11', 'p12',
+     'p13a', 'p13b',
+     'p13c', 'p14', 'p15', 'p16', 'p17', 'p18', 'p19', 'p20', 'p21', 'p22', 'p23', 'p24', 'p27', 'p28', 'p34', 'p35',
+     'p39', 'p44', 'p45a', 'p47', 'p48a', 'p49', 'p50a', 'p50b', 'p51', 'p52', 'p53', 'p55a', 'p57', 'p58', 'a', 'b',
+     'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'n', 'o', 'p', 'q', 'r', 's', 't', 'p5a']
+C_LEN = 65
+strings = [0, 3, 63, 60, 59, 56, 55, 52, 53, 57]
+floats = [51, 50, 49, 48, 46, 47]
 
 
 class DataDownloader:
-    def __init__(self, url='https://ehw.fit.vutbr.cz/izv/', folder='data', cache_filename='data_{}.pkl.gz',
+    def __init__(self, url='https://ehw.fit.vutbr.cz/izv/', folder='data2', cache_filename='data_{}.pkl.gz',
                  header=None):
         if header is None:
             self.header = HEADER
@@ -54,76 +56,39 @@ class DataDownloader:
             with ZipFile(BytesIO(r.content)) as zfile:
                 zfile.extractall(f'{self.folder}/{name.split("/")[-1].split(".")[0]}')
 
-            # with open(f'{self.folder}/{name.split("/")[-1]}', "wb") as f:
-        #     f.write(r.content)
-
     def parse_region_data(self, region):
-        data_matrix = []
-        col_head = COLUMN_HEADER.copy()
-        col_head.insert(0, region)
+        data_list = []
+        finale_data = []
 
         reg_code = self.region_codes.get(region)[0]
         csv_file = self.region_codes.get(region)[1]
-
 
         for csv_path in glob.glob(self.folder + '/*/*.csv'):
             if csv_file == csv_path.split("/")[-1]:
                 with open(csv_path, "r", encoding='ISO-8859-2') as f:
                     csv_r = csv.reader(f, delimiter=';', quotechar='"')
+
+                    rows = len(f.readlines())
+                    f.seek(0)
+                    for r in range(C_LEN):
+                        if r in strings:
+                            data_list.append(np.empty(rows, dtype='<U32'))
+                        elif r in floats:
+                            data_list.append(np.empty(rows, dtype=float))
+                        else:
+                            data_list.append(np.empty(rows, dtype=int))
+
+                    current_row = 0
                     for row in csv_r:
-                        data = row[0:45] + row[47:49] + [row[-1].replace("\n", "")]
+                        self.format_line(row, data_list, current_row)
+                        current_row += 1
 
-                        data = [self.int_nan if x == '' else x for x in data]  # set empty values to nan
-                        data = self.format_line(data, reg_code)
-                        #data = np.array(data)
-
-                        data_matrix.append(data)
-                    #    print(f'{region}:{csv_file.replace(".csv", "")}'
-        data = np.vstack(data_matrix).T
-        # XX year of manufacture set to my 'nan'
-        i = col_head.index('p47')
-        data[i][data[i] == 'XX'] = self.int_nan
-
-
-
-        # format hours
-        i = col_head.index('p2b-hour')
-        data[i][data[i] == '25'] = self.int_nan
-       # data[i] = data[i].astype(int)
-
-        # format minutes
-        i = col_head.index('p2b-minute')
-        data[i][data[i] == '60'] = self.int_nan
-        #data[i] = data[i].astype(int)
-
-
-        """
-        i = col_head.index('p2a')
-
-
-        data[:i] = data[:i].astype(int)
-        data[i+1:d] = data[i+1:d].astype(int)
-        # change gps coordinates to floats
-        d = col_head.index('d')
-        data[d] = data[d].astype(float)
-        data[d+1] = data[d+1].astype(float)
-
-        data[-1] = data[-1].astype(int)
-        """
-        data_list = []
-
-        for i in range(data.shape[0]):
-            try:
-                data_list.append(data[i].astype(int))
-            except ValueError:
-                pass
-
-
-
-        #print(data.shape)
-        #print(len(data_list))
-
-
+                if not finale_data:
+                    finale_data = data_list.copy()
+                else:
+                    for i in range(C_LEN):
+                        finale_data[i] = np.concatenate((finale_data[i], data_list[i]))
+                data_list = []
 
         """
         for zip_file in glob.glob(self.folder + '/*.zip'):
@@ -132,79 +97,41 @@ class DataDownloader:
                     csv_wrap = TextIOWrapper(csv_raw, encoding='ISO-8859-2')
                     csv_r = csv.reader(csv_wrap, delimiter=';', quotechar='"')
                     for row in csv_r:
-                        # get rid of redundant data: p1-p58 + [d,e] + p5a
-                        data = row[0:45] + row[47:49] + [row[-1].replace("\n", "")]
-
-                        data = [self.int_nan if x == '' else x for x in data]  # set empty values to nan
-                        data = self.format_line(data, reg_code)
-                        data_matrix.append(data)
-
-        data = np.vstack(data_matrix).T
-        data_list = []
-        for i in range(data.shape[0]):
-            data_list.append(data[i])
         """
-        return col_head, data_list
+        # return col_head, data_list
 
+    def format_line(self, data, data_list, j):
+        data.insert(6, self.int_nan)  # placeholder cause time is changed from
+        for i in range(C_LEN):
+            if i == 5:
+                time = data[5]
+                data_list[i][j] = (lambda x: x if int(x) < 25 else self.int_nan)(time[:2])
+            elif i == 6:
+                time = data[5]
+                data_list[i][j] = (lambda x: x if int(x) < 25 else self.int_nan)(time[2:])
+            elif i in floats:
+                try:
+                    data_list[i][j] = data[i].replace(',', '.')
+                except ValueError:
+                    data_list[i][j] = self.int_nan
+            elif i in strings:
+                data_list[i][j] = data[i]
+            else:
+                try:
+                    data_list[i][j] = data[i]
+                except ValueError:
+                    data_list[i][j] = self.int_nan
 
-
-    def format_line(self, data, region_number):
-        # time formatting
-        time = data[5]
-        del data[5]  # delete old time
-        #data.insert(5, (lambda x: x if int(x) < 25 else self.int_nan)(time[:2]))  # hours if
-        #data.insert(6, (lambda x: x if int(x) < 60 else self.int_nan)(time[2:]))  # minutes
-        data.insert(5, int(time[:2]))  # hours if
-        data.insert(6, (time[2:]))  # minutes
-        #print(data[5])
-        # gps change for float dtype
-        if data[-3] != self.int_nan:
-            data[-3] = data[-3].replace(',', '.')
-        if data[-2] != self.int_nan:
-            data[-2] = data[-2].replace(',', '.')
-        data[-2] = float(data[-2])
-        data[-3] = float(data[-3])
-        """
-        # GPS formatting
-        # if gps coordinates are not known they are set to -99999
-        if data[-3] == self.int_nan:
-            d = [self.int_nan, self.int_nan]
-        # if gps coordinates does not include ',' therefore split produces only 1 number add '0' as number after ','
-        else:
-            d = data[-3].split(",")
-            d = d if len(d) == 2 else [*d, 0]
-
-        if data[-2] == self.int_nan:
-            e = [self.int_nan, self.int_nan]
-        else:
-            e = data[-2].split(",")
-            e = e if len(e) == 2 else [*e, 0]
-
-        # delete both old gps coordinates
-        del data[-2]
-        del data[-2]
-        # insert spliced gps back
-        data = data[:-1] + d + e + list(data[-1])
-
-        # date formatting
-        date = data[3].split("-")  # split date into [year, month, day]
-        del data[3]
-        # insert date back into list
-        data = data[:3]+date+data[3:]
-
-        
-        # XX year of manufacture set to my 'nan'
-        if data[-16] == 'XX':
-            data[-16] = self.int_nan
-        """
-        data.insert(0, int(region_number))
-        return np.array(data)
+        return 1
 
     def get_list(self, regions=None):
-        pass
-
+        if not regions:
+            for k, v in self.region_codes.items():
+                self.parse_region_data(k)
+        else:
+            pass
 
 if __name__ == "__main__":
     a = DataDownloader()
     # a.download_data()
-    a.parse_region_data('PHA')
+    a.get_list()
