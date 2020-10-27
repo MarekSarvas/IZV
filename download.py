@@ -1,3 +1,4 @@
+import pickle
 from io import BytesIO, TextIOWrapper
 import glob
 import requests
@@ -7,6 +8,7 @@ from bs4 import BeautifulSoup
 import numpy as np
 import os
 import csv
+import re
 
 HEADER = {
     'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:82.0) Gecko/20100101 Firefox/82.0',
@@ -30,7 +32,7 @@ ints = [1,2,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28
 
 
 class DataDownloader:
-    def __init__(self, url='https://ehw.fit.vutbr.cz/izv/', folder='dataz', cache_filename='data_{}.pkl.gz',
+    def __init__(self, url='https://ehw.fit.vutbr.cz/izv/', folder='data3', cache_filename='data_{}.pkl.gz',
                  header=None):
         if header is None:
             self.header = HEADER
@@ -45,20 +47,32 @@ class DataDownloader:
 
         self.int_nan = -99999
         self.cache = {}
+        self.download_regex = re.compile('data/datagis([0-9]{4}|-rok-[0-9]{4})\\.zip')
 
     def download_data(self):
+
         if not os.path.exists(self.folder):
             os.mkdir(self.folder)
         s = requests.session()
         doc = s.get('https://ehw.fit.vutbr.cz/izv/', headers=self.header).text
         soup = BeautifulSoup(doc, 'html.parser')
         zip_names = [item.get('href') for item in soup.find_all("a", {"class": "btn btn-sm btn-primary"})]
+
+        # download zips when matching regex for year data zip file
         for name in zip_names:
-            r = s.get(f'https://ehw.fit.vutbr.cz/izv/{name}', headers=self.header)
-            with ZipFile(BytesIO(r.content)) as zfile:
-                zfile.extractall(f'{self.folder}/{name.split("/")[-1].split(".")[0]}')
+            if self.download_regex.match(name) and not os.path.exists(f'{self.folder}/{name.split("/")[-1]}'):
+                r = s.get(f'https://ehw.fit.vutbr.cz/izv/{name}', headers=self.header)
+                with open(f'{self.folder}/{name.split("/")[-1]}', 'wb') as f:
+                    f.write(r.content)
+
+        # download last month available if it is not already downloaded
+        if not os.path.exists(f'{self.folder}/{zip_names[-1].split("/")[-1]}'):
+            r = s.get(f'https://ehw.fit.vutbr.cz/izv/{zip_names[-1]}', headers=self.header)
+            with open(f'{self.folder}/{zip_names[-1].split("/")[-1]}', 'wb') as f:
+                f.write(r.content)
 
     def parse_region_data(self, region):
+        self.download_data()
         data_list = []
         final_data = []
 
@@ -125,7 +139,7 @@ class DataDownloader:
                 except ValueError:
                     data_list[i][j] = self.int_nan
 
-        return 1
+        return None
 
     def format_line2(self, data, data_list, j):
         data.insert(6, self.int_nan)  # placeholder cause time is changed from
@@ -143,30 +157,45 @@ class DataDownloader:
             except ValueError:
                 data_list[i][j] = self.int_nan
 
-        return 1
-
+        return None
 
     def get_list(self, regions=None):
-        reg_data = None
+        full_data = []
+        full_header = []
+
         if not regions:
-            for k, v in self.region_codes.items():
-                if k in self.cache:
-                    reg_data = self.cache.get(k)
-                else:
-                    reg_data = self.parse_region_data(k)
-                    self.cache[k] = reg_data
-                    print(self.cache.keys())
-        else:
-            if regions in self.cache:
-                reg_data = self.cache.get(regions)
+            regions = self.region_codes.keys()
+
+        for reg in regions:
+            print(reg)
+            # saved in memory
+            if reg in self.cache:
+                reg_data = self.cache.get(reg)
+            # saved in cache on disk
+            elif os.path.exists(f'{self.folder}/{self.cache_file.format(reg)}'):
+                with open(f'{self.folder}/{self.cache_file.format(reg)}', 'rb') as f:
+                    reg_data = pickle.load(f)
+            # unprocessed
             else:
-                reg_data = self.parse_region_data(regions)
-                self.cache[regions] = reg_data
-        print(len(reg_data))
+                reg_data = self.parse_region_data(reg)  # parse data
+                with open(f'{self.folder}/{self.cache_file.format(reg)}', 'w+b') as f:  # save to cache on disk
+                    pickle.dump(reg_data, f)
+                self.cache[reg] = reg_data  # save to memory
+
+            if not full_data:
+                full_data = reg_data[1].copy()
+                full_header = reg_data[0].copy()
+            else:
+                for i in range(len(reg_data[0])):
+                    full_data[i] = np.concatenate((full_data[i], reg_data[1][i]))
+
+        return full_header, full_data
+
 
 
 if __name__ == "__main__":
     a = DataDownloader()
-    # a.download_data()
-    a.get_list()
-    a.get_list()
+    #a.download_data()
+    data = a.get_list(['PHA', 'KVK'])
+    print(data)
+    #a.get_list()
