@@ -1,3 +1,4 @@
+import gzip
 import pickle
 from io import BytesIO, TextIOWrapper
 import glob
@@ -19,17 +20,17 @@ HEADER = {
     'Upgrade-Insecure-Requests': '1',
 }
 
-C = ['p1', 'p36', 'p37', 'p2a', 'weekday(p2a)', 'p2b-hour', 'p2b-minute', 'p6', 'p7', 'p8', 'p9', 'p10', 'p11', 'p12',
-     'p13a', 'p13b',
-     'p13c', 'p14', 'p15', 'p16', 'p17', 'p18', 'p19', 'p20', 'p21', 'p22', 'p23', 'p24', 'p27', 'p28', 'p34', 'p35',
-     'p39', 'p44', 'p45a', 'p47', 'p48a', 'p49', 'p50a', 'p50b', 'p51', 'p52', 'p53', 'p55a', 'p57', 'p58', 'a', 'b',
-     'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'n', 'o', 'p', 'q', 'r', 's', 't', 'p5a']
-C_LEN = 65
-strings = [0, 3, 63, 60, 59, 56, 55, 52, 53, 57]
-floats = [51, 50, 49, 48, 46, 47]
-ints = [1,2,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,
-        41,42,43,44,45,54,57,58,61,62,63,64]
-
+C = ['p1', 'p36', 'p37', 'p2a-year', 'p2a-m-d', 'weekday(p2a)', 'p2b-hour', 'p2b-minute', 'p6', 'p7', 'p8', 'p9', 'p10',
+     'p11', 'p12', 'p13a', 'p13b', 'p13c', 'p14', 'p15', 'p16', 'p17', 'p18', 'p19', 'p20', 'p21', 'p22', 'p23',
+     'p24', 'p27', 'p28', 'p34', 'p35', 'p39', 'p44', 'p45a', 'p47', 'p48a', 'p49', 'p50a', 'p50b', 'p51', 'p52',
+     'p53', 'p55a', 'p57', 'p58', 'a', 'b', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'n', 'o', 'p', 'q', 'r',
+     's', 't', 'p5a']
+C_LEN = 66
+#  indexes 5,6 missing because they are time, indexes 3,4 missing because they are date -> formatted before others
+strings = [0, 4, 61, 60, 57, 56, 53, 54, 58]
+floats = [52, 51, 50, 49, 48, 47]
+ints = [1,2,3,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,
+        42,43,44,45,46,55,59,62,63,64,65]
 
 class DataDownloader:
     def __init__(self, url='https://ehw.fit.vutbr.cz/izv/', folder='data3', cache_filename='data_{}.pkl.gz',
@@ -79,7 +80,7 @@ class DataDownloader:
         csv_file = self.region_codes.get(region)[1]
 
         data_header = C.copy()
-        data_header.insert(0, region)
+        data_header.insert(0, 'region')
 
         for zip_file in glob.glob(self.folder + '/*.zip'):
             with ZipFile(zip_file) as zf:
@@ -106,6 +107,7 @@ class DataDownloader:
                         self.format_line2(row, data_list, current_row)
 
                         current_row += 1
+
                 data_list.insert(0, tmp.copy())
 
                 if not final_data:
@@ -119,6 +121,7 @@ class DataDownloader:
         return (data_header, final_data)
 
     def format_line(self, data, data_list, j):
+
         data.insert(6, self.int_nan)  # placeholder cause time is changed from
         time = data[5]
         for i in range(C_LEN):
@@ -131,7 +134,7 @@ class DataDownloader:
                     data_list[i][j] = data[i].replace(',', '.')
                 except ValueError:
                     data_list[i][j] = self.int_nan
-            elif i in strings:
+            elif i in self.strings:
                 data_list[i][j] = data[i]
             else:
                 try:
@@ -142,21 +145,45 @@ class DataDownloader:
         return None
 
     def format_line2(self, data, data_list, j):
+        # time formatting
         data.insert(6, self.int_nan)  # placeholder cause time is changed from
         time = data[5]
         data_list[5][j] = (lambda x: x if int(x) < 25 else self.int_nan)(time[:2])
         data_list[6][j] = (lambda x: x if int(x) < 25 else self.int_nan)(time[2:])
+
+        # date formatting
+        year, m_d = data[3].split('-', 1)
+        data_list[3][j] = int(year)
+        data_list[4][j] = m_d
+        data.insert(4, m_d)  # insert string into data because its used in for strings loop
+
         for i in floats:
             try:
                 data_list[i][j] = data[i].replace(',', '.')
             except ValueError:
                 data_list[i][j] = self.int_nan
         for i in ints:
+            if i in [3,5,6]:
+                continue
             try:
                 data_list[i][j] = data[i]
             except ValueError:
                 data_list[i][j] = self.int_nan
-
+        for i in strings:
+            data_list[i][j] = data[i]
+        """
+        for i in range(C_LEN):
+            if i in floats:
+                try:
+                    data_list[i][j] = data[i].replace(',', '.')
+                except ValueError:
+                    data_list[i][j] = self.int_nan
+            else:
+                try:
+                    data_list[i][j] = data[i]
+                except ValueError:
+                    data_list[i][j] = self.int_nan
+        """
         return None
 
     def get_list(self, regions=None):
@@ -173,12 +200,12 @@ class DataDownloader:
                 reg_data = self.cache.get(reg)
             # saved in cache on disk
             elif os.path.exists(f'{self.folder}/{self.cache_file.format(reg)}'):
-                with open(f'{self.folder}/{self.cache_file.format(reg)}', 'rb') as f:
+                with gzip.open(f'{self.folder}/{self.cache_file.format(reg)}', 'rb') as f:
                     reg_data = pickle.load(f)
             # unprocessed
             else:
                 reg_data = self.parse_region_data(reg)  # parse data
-                with open(f'{self.folder}/{self.cache_file.format(reg)}', 'w+b') as f:  # save to cache on disk
+                with gzip.open(f'{self.folder}/{self.cache_file.format(reg)}', 'w+b') as f:  # save to cache on disk
                     pickle.dump(reg_data, f)
                 self.cache[reg] = reg_data  # save to memory
 
@@ -194,8 +221,8 @@ class DataDownloader:
 
 
 if __name__ == "__main__":
-    a = DataDownloader()
-    #a.download_data()
-    data = a.get_list(['PHA', 'KVK'])
-    print(data)
-    #a.get_list()
+    dd = DataDownloader()
+    #dd.download_data()
+    data = dd.get_list()
+
+    print(len(ints) + len(floats) + len(strings))
