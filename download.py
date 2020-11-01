@@ -145,16 +145,18 @@ class DataDownloader:
         return None
 
     def format_line2(self, data, data_list, j):
+        # TODO: delete inserting to data_list at the beginning just change/add values to 'data
         # time formatting
         data.insert(6, self.int_nan)  # placeholder cause time is changed from
         time = data[5]
-        data_list[5][j] = (lambda x: x if int(x) < 25 else self.int_nan)(time[:2])
-        data_list[6][j] = (lambda x: x if int(x) < 25 else self.int_nan)(time[2:])
+        data[5] = (lambda x: x if int(x) < 25 else self.int_nan)(time[:2])
+        data[6] = (lambda x: x if int(x) < 25 else self.int_nan)(time[2:])
 
         # date formatting
         year, m_d = data[3].split('-', 1)
-        data_list[3][j] = int(year)
-        data_list[4][j] = m_d
+        #data_list[3][j] = int(year)
+        #data_list[4][j] = m_d
+        data.insert(3, year)
         data.insert(4, m_d)  # insert string into data because its used in for strings loop
 
         for i in floats:
@@ -163,8 +165,6 @@ class DataDownloader:
             except ValueError:
                 data_list[i][j] = self.int_nan
         for i in ints:
-            if i in [3,5,6]:
-                continue
             try:
                 data_list[i][j] = data[i]
             except ValueError:
@@ -194,7 +194,7 @@ class DataDownloader:
             regions = self.region_codes.keys()
 
         for reg in regions:
-            print(reg)
+            print(f'Parsing... ({reg})')
             # saved in memory
             if reg in self.cache:
                 reg_data = self.cache.get(reg)
@@ -219,10 +219,10 @@ class DataDownloader:
         return full_header, full_data
 
 
-
 if __name__ == "__main__":
     dd = DataDownloader()
-    #dd.download_data()
-    data = dd.get_list()
-
-    print(len(ints) + len(floats) + len(strings))
+    regions = ['PHA', 'ULK', 'JHM']
+    data = dd.get_list(regions)
+    print(f'Regions: {regions}')
+    print(f'Columns: {data[0]}')
+    print(f'Number of records: {data[1][0].shape[0]}')
