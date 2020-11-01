@@ -1,9 +1,9 @@
-import re
+import argparse
+import os
+
 import matplotlib.pyplot as plt
 import numpy as np
-import sys
-import os
-import argparse
+
 from download import DataDownloader
 
 
@@ -73,9 +73,6 @@ def plot_stat(data_source, fig_location=None, show_figure=False):
         plt.show()
 
 
-    pass
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--fig_location', default=None, help='Set path where figure is stored')
@@ -83,5 +80,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     data_source = DataDownloader().get_list()
-    # data_source = DataDownloader().get_list(['PHA', 'KVK', 'ULK'])
     plot_stat(data_source, fig_location=args.fig_location, show_figure=args.show_figure)
