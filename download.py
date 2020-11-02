@@ -1,3 +1,10 @@
+"""
+Author: Marek Sarvas
+School: VUT FIT
+Project: IZV
+Description: Script for downloading, parsing and storing car crashes data in czech republic for given years and regions.
+"""
+
 import gzip
 import pickle
 from io import TextIOWrapper
@@ -11,6 +18,7 @@ import os
 import csv
 import re
 
+# header for requests on https://ehw.fit.vutbr.cz/izv/
 HEADER = {
     'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:82.0) Gecko/20100101 Firefox/82.0',
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -20,6 +28,7 @@ HEADER = {
     'Upgrade-Insecure-Requests': '1',
 }
 
+# column headers for formatted data, later on region code is inserted into index 0
 COLUMNS = ['p1', 'p36', 'p37', 'p2a-year', 'p2a-m-d', 'weekday(p2a)', 'p2b-hour', 'p2b-minute', 'p6', 'p7', 'p8', 'p9',
            'p10', 'p11', 'p12', 'p13a', 'p13b', 'p13c', 'p14', 'p15', 'p16', 'p17', 'p18', 'p19', 'p20', 'p21', 'p22',
            'p23', 'p24', 'p27', 'p28', 'p34', 'p35', 'p39', 'p44', 'p45a', 'p47', 'p48a', 'p49', 'p50a', 'p50b', 'p51',
@@ -35,6 +44,8 @@ ints = [1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
 
 
 class DataDownloader:
+    """ Class for downloading data, formatting them and storing into memory/cache. """
+
     def __init__(self, url='https://ehw.fit.vutbr.cz/izv/', folder='data', cache_filename='data_{}.pkl.gz',
                  header=None):
 
@@ -55,7 +66,12 @@ class DataDownloader:
         self.download_regex = re.compile('data/datagis([0-9]{4}|-rok-[0-9]{4})\\.zip')  # only files with year data
 
     def download_data(self):
+        """Downloads data from url.
 
+        Create directory where to store the data and download last zip of every year into it. Using BeautifoulSoup and
+        regex to find correct zips in html.
+        :return: None
+        """
         if not os.path.exists(self.folder):
             os.mkdir(self.folder)
 
@@ -79,6 +95,14 @@ class DataDownloader:
                 f.write(r.content)
 
     def parse_region_data(self, region):
+        """ Format downloaded data into correct values and data types.
+
+        Downloads missing zip files, format data from every year for every region in 'region' variable and stores them
+        into numpy arrays. Every numpy array represents column in csv file.
+
+        :param region: list of regions to parse from zips
+        :return: tuple of list of column headers for data and list of numpy arrays where every array is one column
+        """
         self.download_data()
         data_list = []
         final_data = []
@@ -122,7 +146,7 @@ class DataDownloader:
                 if not final_data:
                     final_data = data_list.copy()
                 else:
-                    for i in range(C_LEN):
+                    for i in range(len(data_header)):
                         final_data[i] = np.concatenate((final_data[i], data_list[i]))
 
                 data_list = []
@@ -131,6 +155,7 @@ class DataDownloader:
 
     def format_line2(self, data, data_list, j):
         """ Format one line of data from read file.
+
         Format time and date separately, than store data into pre-made numpy arrays when converting values with invalid
         data type store "my NaN number".
         :param data: one row of data from file
@@ -166,6 +191,14 @@ class DataDownloader:
         return None
 
     def get_list(self, regions=None):
+        """ Concatenate formatted data for every given region, stores them into memory and cache(compressed on disk).
+
+        If regions are not specified it gets data of every region (region codes stored in instance attribute). Every
+        regions data concatenates into numpy arrays representing columns. It takes data from memory if available, if not
+        from disk cache if disk cache is not created it calls parser, formatted data stores into disk cache, memory.
+        :param regions: list of regions to create list of
+        :return:  tuple of list of column headers for data and list of numpy arrays where every array is one column
+        """
         full_data = []
         full_header = []
 

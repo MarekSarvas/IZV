@@ -1,3 +1,10 @@
+"""
+Author: Marek Sarvas
+School: VUT FIT
+Project: IZV
+Description: Script for creating graph of car crashes in czech republic for given years and regions.
+"""
+
 import argparse
 import os
 
@@ -8,6 +15,12 @@ from download import DataDownloader
 
 
 def plot_stat(data_source, fig_location=None, show_figure=False):
+    """ Plots number of crashes in every year for every region.
+
+    :param data_source: tuple of formatted data, index 0 is list of column header, index 1 is list od numpy arrays
+    :param fig_location: path where created figure will be stored
+    :param show_figure: boolean if figure should be displayed
+    """
     # make matrix from regions and years with shape=(crashes, 2)
     data = np.vstack((data_source[1][0], data_source[1][4])).T
 
@@ -20,8 +33,8 @@ def plot_stat(data_source, fig_location=None, show_figure=False):
 
     # create figure and subplots
     fig, axs = plt.subplots(max_year - min_year+1, 1, sharex='col')
-    fig.set_figwidth(7)
-    fig.set_figheight(5)
+    fig.set_figwidth(10)
+    fig.set_figheight(6)
     fig.suptitle('Počet nehôd v jednotlivých rokoch v českých krajoch', verticalalignment='top',
                  horizontalalignment='center')
     fig.tight_layout()
@@ -54,21 +67,24 @@ def plot_stat(data_source, fig_location=None, show_figure=False):
         axs[y].spines['right'].set_visible(False)
         axs[y].spines['top'].set_visible(False)
 
+        axs[y].xaxis.set_ticks_position('none')
+
         # adjust y axis with ticks and label
         yticks = np.arange(0, np.max(crashes), 5000)
         axs[y].set_yticks(yticks)
         axs[y].tick_params(axis="y", labelsize=8, rotation=20)
         axs[y].yaxis.grid(True)
-        axs[y].xaxis.set_ticks_position('none')
         axs[y].set_ylabel('Počet nehôd', fontsize=8)
 
         axs[y].set_axisbelow(True)  # grid is behind bars
         axs[y].set_title(min_year+y, size=10)  # title of subplot
 
+    # save figure as png
     if fig_location:
         if not os.path.exists(f'{fig_location}'):
             os.mkdir(fig_location)
         plt.savefig(f'{fig_location}/crashes.png', bbox_inches="tight")
+
     if show_figure:
         plt.show()
 
