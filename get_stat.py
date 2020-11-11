@@ -10,6 +10,7 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.ticker import MultipleLocator
 
 from download import DataDownloader
 
@@ -32,7 +33,7 @@ def plot_stat(data_source, fig_location=None, show_figure=False):
     min_year = int(data[np.argmin(data[:, 1])][1])
 
     # create figure and subplots
-    fig, axs = plt.subplots(max_year - min_year+1, 1, sharex='col')
+    fig, axs = plt.subplots(max_year - min_year+1, 1, sharex=True, sharey=True)
     fig.set_figwidth(8)
     fig.set_figheight(6)
     fig.suptitle('Počet nehôd v jednotlivých rokoch v českých krajoch', verticalalignment='top',
@@ -69,9 +70,7 @@ def plot_stat(data_source, fig_location=None, show_figure=False):
 
         axs[y].xaxis.set_ticks_position('none')
 
-        # adjust y axis with ticks and label
-        yticks = np.arange(0, np.max(crashes), 5000)
-        axs[y].set_yticks(yticks)
+        axs[y].yaxis.set_major_locator(MultipleLocator(5000))
         axs[y].tick_params(axis="y", labelsize=8, rotation=20)
         axs[y].yaxis.grid(True)
         axs[y].set_ylabel('Počet nehôd', fontsize=8)
