@@ -29,17 +29,17 @@ HEADER = {
 }
 
 # column headers for formatted data, later on region code is inserted into index 0
-COLUMNS = ['ID', 'druh pozemni komunikace', 'cislo pozemni komunikace', 'rok', 'mesiac-den', 'den v tydnu', 'hodina',
-           'minuta', 'druh nehody', 'druh srazky jedoucich vozidel', 'druh pevne prekazky', 'charakter nehody',
-           'zavineni nehody', 'alkohol u vinika nehody pritomen', 'hlavni priciny nehody', 'usmrceno osob',
-           'tezce zraneno osob', 'lehce zraneno osob', 'celkova hmotna skoda', 'druh povrchu vozovky',
-           'stav povrchu vozovky v dobe nehody', 'stav komunikace', 'povetrnostni podminky v dobe nehody', 'viditelnost',
-           'rozhledove pomery', 'deleni komunikace', 'situovani nehody na komunikaci', 'rizeni provozu v dobe nehody',
-           'mistni uprava prednosti v jizde', 'specificka mista a objekty v miste nehody', 'smerove pomery',
-           'pocet zucastnenych vozidel', 'misto dopravni nehody', 'druh krizujici komunikace', 'druh vozidla',
-           'vyrobni znacka motoroveho vozidla', 'rok vyroby vozidla', 'charakteristika vozidla', 'smyk', 'vozidlo po nehode',
-           'unik provoznich, prepravovanych hmot', 'zpusob vyprosteni osob z vozidla', 'smer jizdy nebo postaveni vozidla',
-           'skoda na vozidle', 'kategorie ridice', 'stav ridice', 'nejsi ovlivneni ridice', 'a', 'b', 'gps_x', 'gps_y',
+COLUMNS = ['ID', 'druh pozemnej komunikacie', 'cislo pozemnej komunikacie', 'rok', 'mesiac-den', 'den v tyzdni', 'hodina',
+           'minuta', 'druh nehody', 'druh zrazky iducich vozidiel', 'druh pevnej prekazky', 'charakter nehody',
+           'zavinenie nehody', 'alkohol u vinnika nehody pritomny', 'hlavne priciny nehody', 'usmrtenych osob',
+           'tazko zranenych osob', 'lahko zranenych osob', 'celkova hmotna skoda', 'druh povrchu vozovky',
+           'stav povrchu vozovky v dobe nehody', 'stav komunikacie', 'poveternostne podmienky v dobe nehody', 'viditelnost',
+           'rozhladove pomery', 'delenie komunikacie', 'situovanie nehody na komunikacii', 'riadenie premavky v dobe nehody',
+           'miestna uprava prednosti v jazde', 'specificke miesta a objekty v mieste nehody', 'smerove pomery',
+           'pocet zucastnenych vozidiel', 'miesto dopravnej nehody', 'druh krizujucej komunikacie', 'druh vozidla',
+           'vyrobna znacka motoroveho vozidla', 'rok vyroby vozidla', 'charakteristika vozidla', 'smyk', 'vozidlo po nehode',
+           'unik provoznych, prepravovanych hmot', 'zposob vyslobodenia osob z vozidla', 'smer jazdy alebo postavenia vozidla',
+           'skoda na vozidle', 'kategoria sofera', 'stav sofera', 'vonkajsie ovplyvnenie sofera', 'a', 'b', 'gps_x', 'gps_y',
            'f', 'g', 'h', 'i', 'j', 'k', 'l', 'n', 'o', 'p', 'q', 'r', 's', 't', 'lokalita nehody']
 C_LEN = len(COLUMNS)
 
