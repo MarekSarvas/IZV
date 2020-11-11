@@ -29,11 +29,18 @@ HEADER = {
 }
 
 # column headers for formatted data, later on region code is inserted into index 0
-COLUMNS = ['p1', 'p36', 'p37', 'p2a-year', 'p2a-m-d', 'weekday(p2a)', 'p2b-hour', 'p2b-minute', 'p6', 'p7', 'p8', 'p9',
-           'p10', 'p11', 'p12', 'p13a', 'p13b', 'p13c', 'p14', 'p15', 'p16', 'p17', 'p18', 'p19', 'p20', 'p21', 'p22',
-           'p23', 'p24', 'p27', 'p28', 'p34', 'p35', 'p39', 'p44', 'p45a', 'p47', 'p48a', 'p49', 'p50a', 'p50b', 'p51',
-           'p52', 'p53', 'p55a', 'p57', 'p58', 'a', 'b', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'n', 'o', 'p',
-           'q', 'r', 's', 't', 'p5a']
+COLUMNS = ['ID', 'druh pozemni komunikace', 'cislo pozemni komunikace', 'rok', 'mesiac-den', 'den v tydnu', 'hodina',
+           'minuta', 'druh nehody', 'druh srazky jedoucich vozidel', 'druh pevne prekazky', 'charakter nehody',
+           'zavineni nehody', 'alkohol u vinika nehody pritomen', 'hlavni priciny nehody', 'usmrceno osob',
+           'tezce zraneno osob', 'lehce zraneno osob', 'celkova hmotna skoda', 'druh povrchu vozovky',
+           'stav povrchu vozovky v dobe nehody', 'stav komunikace', 'povetrnostni podminky v dobe nehody', 'viditelnost',
+           'rozhledove pomery', 'deleni komunikace', 'situovani nehody na komunikaci', 'rizeni provozu v dobe nehody',
+           'mistni uprava prednosti v jizde', 'specificka mista a objekty v miste nehody', 'smerove pomery',
+           'pocet zucastnenych vozidel', 'misto dopravni nehody', 'druh krizujici komunikace', 'druh vozidla',
+           'vyrobni znacka motoroveho vozidla', 'rok vyroby vozidla', 'charakteristika vozidla', 'smyk', 'vozidlo po nehode',
+           'unik provoznich, prepravovanych hmot', 'zpusob vyprosteni osob z vozidla', 'smer jizdy nebo postaveni vozidla',
+           'skoda na vozidle', 'kategorie ridice', 'stav ridice', 'nejsi ovlivneni ridice', 'a', 'b', 'gps_x', 'gps_y',
+           'f', 'g', 'h', 'i', 'j', 'k', 'l', 'n', 'o', 'p', 'q', 'r', 's', 't', 'lokalita nehody']
 C_LEN = len(COLUMNS)
 
 strings = [0, 4, 61, 60, 57, 56, 53, 54, 58]  # indexes of columns with value type string

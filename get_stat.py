@@ -33,7 +33,7 @@ def plot_stat(data_source, fig_location=None, show_figure=False):
 
     # create figure and subplots
     fig, axs = plt.subplots(max_year - min_year+1, 1, sharex='col')
-    fig.set_figwidth(10)
+    fig.set_figwidth(8)
     fig.set_figheight(6)
     fig.suptitle('Počet nehôd v jednotlivých rokoch v českých krajoch', verticalalignment='top',
                  horizontalalignment='center')
@@ -81,9 +81,13 @@ def plot_stat(data_source, fig_location=None, show_figure=False):
 
     # save figure as png
     if fig_location:
-        if not os.path.exists(f'{fig_location}'):
-            os.mkdir(fig_location)
-        plt.savefig(f'{fig_location}/crashes.png', bbox_inches="tight")
+        path = fig_location.split('/')
+        file = path[-1]
+        path.pop(-1)
+        path = '/'.join(path)
+        if not os.path.exists(f'{path}'):
+            os.makedirs(path)
+        plt.savefig(f'{path}/{file}', bbox_inches="tight")
 
     if show_figure:
         plt.show()
