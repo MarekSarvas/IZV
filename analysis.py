@@ -21,7 +21,6 @@ to_int8 = ['p5a', 'p6', 'p7', 'p8', 'p9', 'p10', 'p11', 'p15', 'p16', 'p18', 'p1
 
 
 def get_dataframe(filename="accidents.pkl.gz", verbose=False):
-
     data = pd.read_pickle(filename, compression="gzip")
 
     if verbose:
@@ -41,7 +40,6 @@ def get_dataframe(filename="accidents.pkl.gz", verbose=False):
 
 
 def plot_conseq(df, fig_location=None, show_figure=False):
-
     print("Creating data frames")
     p13a = df[['region', 'p13a']].groupby('region').agg(np.sum).reset_index()
     p13b = df[['region', 'p13b']].groupby('region').agg(np.sum).reset_index()
@@ -82,7 +80,45 @@ def plot_conseq(df, fig_location=None, show_figure=False):
 
 
 def plot_damage(df, fig_location=None, show_figure=False):
-    pass
+    my_regions = ['PHA', 'JHM', 'STC', 'VYS']  # regions to plot
+
+    data = df[['region', 'p12', 'p53']]  # get only needed columns
+
+    # create category data for accident cause and change p12 column to it
+    data['p12'] = pd.cut(data['p12'], [99, 200, 300, 400, 500, 600, float('inf')],
+                         labels=['nezaviněná řidičem', 'nepřiměřená rychlost jízdy', 'nesprávné předjíždění',
+                                 'nedání přednosti v jízdě',
+                                 'nesprávný způsob jízdy', 'technická závada vozidla'])
+
+    # segment data into bins based on damage costs
+    p53 = pd.cut(data['p53'], [-float('inf'), 50, 200, 500, 1000, float('inf')],
+                 labels=['< 50', '50 - 200', '200 - 500',
+                         '500 - 1000', '1000 >'])
+
+    # insert segmented damage costs into "dmg_cost" column
+    data.insert(0, column='dmg_cost', value=p53)
+
+    sns.set_style("darkgrid")
+    # count number of  accidents w.r.t. region, damage costs, cause of accident and add it as column "count"
+    data = data.groupby(['region', 'dmg_cost', 'p12'])['p53'].count().reset_index(name='count')
+    fig, axs = plt.subplots(2, 2)
+
+    # plot each region of my regions into corresponding subplot
+    for i, ax in enumerate(axs.flatten()):
+        print(data[data['region'] == my_regions[i]])
+        region_data = data[data['region'] == my_regions[i]]  # get region
+        # ax.set(yscale="log")
+        sns.barplot(ax=ax, x="dmg_cost", y="count", hue="p12", data=region_data, log=True)
+        ax.legend().set_visible(False)
+        handles, labels = ax.get_legend_handles_labels()
+
+    fig.legend(handles, labels, loc='center right')
+
+    if fig_location is not None:
+        plt.savefig(f'{fig_location}', bbox_inches="tight")
+
+    if show_figure:
+        plt.show()
 
 
 def plot_surface(df, fig_location=None, show_figure=False):
@@ -91,4 +127,5 @@ def plot_surface(df, fig_location=None, show_figure=False):
 
 if __name__ == '__main__':
     df = get_dataframe()
-    plot_conseq(df, show_figure=True)
+    # plot_conseq(df, show_figure=True)
+    plot_damage(df, show_figure=True)
