@@ -43,29 +43,37 @@ def get_dataframe(filename="accidents.pkl.gz", verbose=False):
 def plot_conseq(df, fig_location=None, show_figure=False):
 
     print("Creating data frames")
-    p13a = df[['region', 'p13a']].groupby('region').agg(np.sum).reset_index().sort_values('p13a', ascending=False)
-    p13b = df[['region', 'p13b']].groupby('region').agg(np.sum).reset_index().sort_values('p13b', ascending=False)
-    p13c = df[['region', 'p13c']].groupby('region').agg(np.sum).reset_index().sort_values('p13c', ascending=False)
-
+    p13a = df[['region', 'p13a']].groupby('region').agg(np.sum).reset_index()
+    p13b = df[['region', 'p13b']].groupby('region').agg(np.sum).reset_index()
+    p13c = df[['region', 'p13c']].groupby('region').agg(np.sum).reset_index()
     crashes = df['region'].value_counts().sort_values(ascending=False)
     data_list = [p13a, p13b, p13c]
 
-
-    fig, axs = plt.subplots(4, 1)
+    sns.set_style("darkgrid")
+    fig, axs = plt.subplots(4, 1, sharex=True)
     fig.set_figwidth(8)
     fig.set_figheight(6)
 
     fig.tight_layout()
     fig.subplots_adjust(top=0.89)  # adjust space between figure title and first subplot
 
+    c_pallet = sns.color_palette("mako", n_colors=14)
 
-    sns.barplot(ax=axs[0], x="region", y="p13a", data=p13a, order=p13a['region'])
-    sns.barplot(ax=axs[1], x="region", y="p13b", data=p13b, order=p13b['region'])
-    sns.barplot(ax=axs[2], x="region", y="p13c", data=p13c, order=p13c['region'])
-    sns.barplot(ax=axs[3], x=crashes.index, y=crashes.values)
-    axs[0].set(xlabel=None, ylabel='usmrceno osob')
-    axs[1].set(xlabel=None, ylabel='tezce zraneno osob')
-    axs[2].set(xlabel=None, ylabel='lehce zraneno osob')
+    sns.barplot(ax=axs[0], x="region", y="p13a", data=p13a, order=p13a['region'], palette=c_pallet)
+    sns.barplot(ax=axs[1], x="region", y="p13b", data=p13b, order=p13b['region'], palette=c_pallet)
+    sns.barplot(ax=axs[2], x="region", y="p13c", data=p13c, order=p13c['region'], palette=c_pallet)
+    sns.barplot(ax=axs[3], x=crashes.index, y=crashes.values, palette=c_pallet)
+
+    axs[0].title.set_text('usmrceno osob')
+    axs[1].title.set_text('tezce zraneno osob')
+    axs[2].title.set_text('lehce zraneno osob')
+    axs[3].title.set_text('celkovy  pocet nehod')
+
+    for i in range(4):
+        axs[i].set(xlabel=None, ylabel='pocet')
+        axs[i].spines['right'].set_visible(False)
+        axs[i].spines['top'].set_visible(False)
+
     if fig_location is not None:
         plt.savefig(f'{fig_location}', bbox_inches="tight")
 
