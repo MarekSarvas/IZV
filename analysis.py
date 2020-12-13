@@ -4,7 +4,6 @@ School: VUT FIT
 Project: IZV
 Description: Script for creating graph of car crashes in czech republic for given years and regions.
 """
-from textwrap import wrap
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -22,6 +21,12 @@ to_int8 = ['p5a', 'p6', 'p7', 'p8', 'p9', 'p10', 'p11', 'p15', 'p16', 'p18', 'p1
 
 
 def get_dataframe(filename="accidents.pkl.gz", verbose=False):
+    """ Loads zipped dataframe and lower its size by changing to better data types.
+
+    :param filename: path to stored dataframe
+    :param verbose: if true print size of dataframe
+    :return: pandas DataFrame with changed types of columns
+    """
     data = pd.read_pickle(filename, compression="gzip")
 
     if verbose:
@@ -45,17 +50,25 @@ def get_dataframe(filename="accidents.pkl.gz", verbose=False):
 
 
 def plot_conseq(df, fig_location=None, show_figure=False):
+    """ Plots crash consequences for every region based on theirseverity.
+
+    :param df: pandas DataFrame
+    :param fig_location: location where the figure will be saved, if None figure is not saved
+    :param show_figure: if true show figure
+    """
     # create data frames for each subplot
     p13a = df[['region', 'p13a']].groupby('region').agg(np.sum).reset_index()
     p13b = df[['region', 'p13b']].groupby('region').agg(np.sum).reset_index()
     p13c = df[['region', 'p13c']].groupby('region').agg(np.sum).reset_index()
     crashes = df['region'].value_counts().sort_values(ascending=False)
 
+    titles = list(['Usmrtených osôb', 'Ťažko zranených osôb', 'Ľahko zranených osôb', 'Celkový  počet nehôd'])
     # main figure settings
     sns.set_style("darkgrid")
-    fig, axs = plt.subplots(4, 1, sharex=True)
-    fig.set_figwidth(10)
-    fig.set_figheight(8)
+    fig, axs = plt.subplots(4, 1)
+
+    fig.set_figwidth(8)
+    fig.set_figheight(10)
     fig.tight_layout()
     fig.subplots_adjust(top=0.89)  # adjust space between figure title and first subplot
     fig.suptitle('Následky nehôd v jednotlivých regiónoch')
@@ -63,22 +76,19 @@ def plot_conseq(df, fig_location=None, show_figure=False):
     c_pallet = sns.color_palette("mako", n_colors=14)
 
     # plot each data frame as bar into corresponding subplots
-    sns.barplot(ax=axs[0], x="region", y="p13a", data=p13a, order=p13a['region'], palette=c_pallet)
-    sns.barplot(ax=axs[1], x="region", y="p13b", data=p13b, order=p13b['region'], palette=c_pallet)
-    sns.barplot(ax=axs[2], x="region", y="p13c", data=p13c, order=p13c['region'], palette=c_pallet)
+    sns.barplot(ax=axs[0], x="region", y="p13a", data=p13a, order=crashes.index, palette=c_pallet)
+    sns.barplot(ax=axs[1], x="region", y="p13b", data=p13b, order=crashes.index, palette=c_pallet)
+    sns.barplot(ax=axs[2], x="region", y="p13c", data=p13c, order=crashes.index, palette=c_pallet)
     sns.barplot(ax=axs[3], x=crashes.index, y=crashes.values, palette=c_pallet)
 
-    # set titles for each subplot
-    axs[0].title.set_text('Usmrtených osôb')
-    axs[1].title.set_text('Ťažko zranených osôb')
-    axs[2].title.set_text('Ľahko zranených osôb')
-    axs[3].title.set_text('Celkový  počet nehôd')
-
-    # adjust labels and borders
+    # set titles, adjust labels and borders
     for i in range(4):
+        axs[i].title.set_text(titles[i])
         axs[i].set(xlabel=None, ylabel='pocet')
         axs[i].spines['right'].set_visible(False)
         axs[i].spines['top'].set_visible(False)
+
+    fig.tight_layout(pad=2.0)
 
     if fig_location is not None:
         plt.savefig(f'{fig_location}', bbox_inches="tight")
@@ -88,15 +98,25 @@ def plot_conseq(df, fig_location=None, show_figure=False):
 
 
 def plot_damage(df, fig_location=None, show_figure=False):
+    """ Plots damage cost of accidents in 4 regions w.r.t. cause of accident.
+
+    :param df: pandas DataFrame
+    :param fig_location: location where the figure will be saved, if None figure is not saved
+    :param show_figure: if true show figure
+    """
     my_regions = ['ULK', 'JHM', 'HKK', 'VYS']  # regions to plot
 
-    data = df[['region', 'p12', 'p53']]  # get only needed columns
+    data_tmp = df[['region', 'p12', 'p53']]  # get only needed columns
 
+    # accident cause labels
+    labels = ['nezaviněná řidičem', 'nepřiměřená rychlost jízdy', 'nesprávné předjíždění',
+              'nedání přednosti v jízdě',
+              'nesprávný způsob jízdy', 'technická závada vozidla']
+
+    # copy the data frame, otherwise loc causes a warning
+    data = data_tmp.copy()
     # create category data for accident cause and change p12 column to it
-    data['p12'] = pd.cut(data['p12'], [99, 200, 300, 400, 500, 600, float('inf')],
-                         labels=['nezaviněná řidičem', 'nepřiměřená rychlost jízdy', 'nesprávné předjíždění',
-                                 'nedání přednosti v jízdě',
-                                 'nesprávný způsob jízdy', 'technická závada vozidla'])
+    data.loc[:, 'p12'] = pd.cut(data_tmp['p12'], [99, 200, 300, 400, 500, 600, float('inf')], labels=labels)
 
     # segment data into bins based on damage costs
     p53 = pd.cut(data['p53'], [-float('inf'), 50, 200, 500, 1000, float('inf')],
@@ -117,11 +137,13 @@ def plot_damage(df, fig_location=None, show_figure=False):
     fig.suptitle('Príčiny nehôd v krajoch')
     fig.tight_layout(pad=3.0)
 
+    c_pallet = sns.color_palette("mako", n_colors=len(labels))
+
     # plot each region of my regions into corresponding subplot
     for i, ax in enumerate(axs.flatten()):
         region_data = data[data['region'] == my_regions[i]]  # get region
 
-        sns.barplot(ax=ax, x="dmg_cost", y="count", hue="p12", data=region_data, log=True)
+        sns.barplot(ax=ax, x="dmg_cost", y="count", hue="p12", data=region_data, log=True, palette=c_pallet)
         ax.legend().set_visible(False)  # hide legends inside plots
 
         # set titles, labels and adjust sizes
@@ -146,6 +168,12 @@ def plot_damage(df, fig_location=None, show_figure=False):
 
 
 def plot_surface(df, fig_location=None, show_figure=False):
+    """  Visualize number of accidents w.r.t. road surface in 4 regions for every month in years.
+
+    :param df: pandas DataFrame
+    :param fig_location: location where the figure will be saved, if None figure is not saved
+    :param show_figure: if true show figure
+    """
     my_regions = ['ULK', 'JHM', 'HKK', 'VYS']  # regions to plot
 
     # labels for numeric values of road surface
@@ -156,9 +184,13 @@ def plot_surface(df, fig_location=None, show_figure=False):
                      9: 'náhlá změna stavu', 0: 'jiný stav'}
 
     data = df[['region', 'date', 'p16']]  # get needed columns
-    data['date'] = pd.to_datetime(data["date"].dt.strftime('%Y-%m'))  # remove days
+
+    # copy the data frame, otherwise loc causes a warning
+    data_copy = data.copy()
+    data_copy.loc[:, 'date'] = pd.to_datetime(data["date"].dt.strftime('%Y-%m'))  # remove days
+
     # crosstab indexes are region and date,  columns are road surface
-    ctab_data = pd.crosstab([data.region, data.date], data.p16).rename(columns=p16_to_string)
+    ctab_data = pd.crosstab([data_copy.region, data_copy.date], data_copy.p16).rename(columns=p16_to_string)
 
     # stack data w.r.t. road surface(p16) -> values are in column "count"
     stacked = ctab_data.stack()
