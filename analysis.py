@@ -1,16 +1,21 @@
+#!/usr/bin/env python3.8
+# coding=utf-8
+
 """
 Author: Marek Sarvas
 School: VUT FIT
 Project: IZV
 Description: Script for creating graph of car crashes in czech republic for given years and regions.
 """
+from textwrap import wrap
 
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
+from matplotlib import pyplot as plt
 import pandas as pd
-import gzip
-import pickle
+import seaborn as sns
+import numpy as np
+import os
+# muzete pridat libovolnou zakladni knihovnu ci knihovnu predstavenou na prednaskach
+# dalsi knihovny pak na dotaz
 
 B_to_MB = 1048576
 
@@ -19,14 +24,14 @@ to_float = ['d', 'e', 'f', 'g']
 to_int8 = ['p5a', 'p6', 'p7', 'p8', 'p9', 'p10', 'p11', 'p15', 'p16', 'p18', 'p19', 'p20', 'p21', 'p22', 'p23', 'p24',
            'p27', 'p28', 'p49', 'p50a', 'p50b', 'p51', 'p55a', 'p57', 'p58']
 
-
-def get_dataframe(filename="accidents.pkl.gz", verbose=False):
+# Ukol 1: nacteni dat
+def get_dataframe(filename: str, verbose: bool = False) -> pd.DataFrame:
     """ Loads zipped dataframe and lower its size by changing to better data types.
 
-    :param filename: path to stored dataframe
-    :param verbose: if true print size of dataframe
-    :return: pandas DataFrame with changed types of columns
-    """
+        :param filename: path to stored dataframe
+        :param verbose: if true print size of dataframe
+        :return: pandas DataFrame with changed types of columns
+        """
     data = pd.read_pickle(filename, compression="gzip")
 
     if verbose:
@@ -48,14 +53,15 @@ def get_dataframe(filename="accidents.pkl.gz", verbose=False):
 
     return data
 
-
-def plot_conseq(df, fig_location=None, show_figure=False):
+# Ukol 2: následky nehod v jednotlivých regionech
+def plot_conseq(df: pd.DataFrame, fig_location: str = None,
+                show_figure: bool = False):
     """ Plots crash consequences for every region based on theirseverity.
 
-    :param df: pandas DataFrame
-    :param fig_location: location where the figure will be saved, if None figure is not saved
-    :param show_figure: if true show figure
-    """
+        :param df: pandas DataFrame
+        :param fig_location: location where the figure will be saved, if None figure is not saved
+        :param show_figure: if true show figure
+        """
     # create data frames for each subplot
     p13a = df[['region', 'p13a']].groupby('region').agg(np.sum).reset_index()
     p13b = df[['region', 'p13b']].groupby('region').agg(np.sum).reset_index()
@@ -96,25 +102,27 @@ def plot_conseq(df, fig_location=None, show_figure=False):
     if show_figure:
         plt.show()
 
-
-def plot_damage(df, fig_location=None, show_figure=False):
+# Ukol3: příčina nehody a škoda
+def plot_damage(df: pd.DataFrame, fig_location: str = None,
+                show_figure: bool = False):
     """ Plots damage cost of accidents in 4 regions w.r.t. cause of accident.
 
-    :param df: pandas DataFrame
-    :param fig_location: location where the figure will be saved, if None figure is not saved
-    :param show_figure: if true show figure
-    """
+        :param df: pandas DataFrame
+        :param fig_location: location where the figure will be saved, if None figure is not saved
+        :param show_figure: if true show figure
+        """
     my_regions = ['ULK', 'JHM', 'HKK', 'VYS']  # regions to plot
 
     data_tmp = df[['region', 'p12', 'p53']]  # get only needed columns
 
     # accident cause labels
-    labels = ['nezaviněná řidičem', 'nepřiměřená rychlost jízdy', 'nesprávné předjíždění',
-              'nedání přednosti v jízdě',
-              'nesprávný způsob jízdy', 'technická závada vozidla']
+    labels = ['nezavinená vodičom', 'neprimeraná rýchlosť jazdy', 'nesprávne predbiehanie',
+              'nedanie prednosti v jazde',
+              'nesprávny spôsob jazdy', 'technická závada vozidla']
 
     # copy the data frame, otherwise loc causes a warning
     data = data_tmp.copy()
+    data['p53'] = data['p53'].div(10)
     # create category data for accident cause and change p12 column to it
     data.loc[:, 'p12'] = pd.cut(data_tmp['p12'], [99, 200, 300, 400, 500, 600, float('inf')], labels=labels)
 
@@ -157,7 +165,8 @@ def plot_damage(df, fig_location=None, show_figure=False):
     # move subplots to make space for legend, add legend
     fig.subplots_adjust(right=0.8)
     handles, labels = axs[0, 0].get_legend_handles_labels()  # params for legend
-    fig.legend(handles, labels, loc='center left', bbox_to_anchor=(0.80, 0.5), ncol=1, title='Príčiny nehôd', fontsize=8,
+    fig.legend(handles, labels, loc='center left', bbox_to_anchor=(0.80, 0.5), ncol=1, title='Príčiny nehôd',
+               fontsize=8,
                fancybox=False, shadow=False, borderpad=None, frameon=False)
 
     if fig_location is not None:
@@ -166,22 +175,23 @@ def plot_damage(df, fig_location=None, show_figure=False):
     if show_figure:
         plt.show()
 
-
-def plot_surface(df, fig_location=None, show_figure=False):
+# Ukol 4: povrch vozovky
+def plot_surface(df: pd.DataFrame, fig_location: str = None,
+                 show_figure: bool = False):
     """  Visualize number of accidents w.r.t. road surface in 4 regions for every month in years.
 
-    :param df: pandas DataFrame
-    :param fig_location: location where the figure will be saved, if None figure is not saved
-    :param show_figure: if true show figure
-    """
+        :param df: pandas DataFrame
+        :param fig_location: location where the figure will be saved, if None figure is not saved
+        :param show_figure: if true show figure
+        """
     my_regions = ['ULK', 'JHM', 'HKK', 'VYS']  # regions to plot
 
     # labels for numeric values of road surface
-    p16_to_string = {1: 'suchý neznečištěný', 2: 'suchý znečištěný', 3: 'mokrý',
-                     4: 'bláto', 5: 'náledí, ujetý sníh - posypané',
-                     6: 'náledí, ujetý sníh - neposypané',
-                     7: 'rozlitý olej, nafta apod.', 8: 'souvisly sníh',
-                     9: 'náhlá změna stavu', 0: 'jiný stav'}
+    p16_to_string = {1: 'suchý neznečistený', 2: 'suchý znečistený', 3: 'mokrý',
+                     4: 'blato', 5: 'poľadovice, najazdený sneh - posypané',
+                     6: 'poľadovice, najazdený sneh - neposypané',
+                     7: 'rozliaty olej, nafta apod.', 8: 'súvislý sneh',
+                     9: 'náhla zmena stavu', 0: 'iný stav'}
 
     data = df[['region', 'date', 'p16']]  # get needed columns
 
@@ -209,7 +219,7 @@ def plot_surface(df, fig_location=None, show_figure=False):
     for i, ax in enumerate(axs.flatten()):
         region_data = stacked[stacked['region'] == my_regions[i]]  # get region
 
-        sns.lineplot(ax=ax, x="date", y="count", hue='p16',  data=region_data)
+        sns.lineplot(ax=ax, x="date", y="count", hue='p16', data=region_data)
         ax.legend().set_visible(False)  # hide legends inside plots
 
         # set titles, labels and adjust sizes
@@ -219,7 +229,9 @@ def plot_surface(df, fig_location=None, show_figure=False):
     # move subplots to make space for legend, add legend
     fig.subplots_adjust(right=0.80)
     handles, labels = axs[0, 0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc='center left', bbox_to_anchor=(0.80, 0.5), ncol=1, title='Stav vozovky', fontsize=8,
+    # wraps long legend labels
+    labels = ['\n'.join(wrap(l, 30)) for l in labels]
+    fig.legend(handles, labels, loc='center left', bbox_to_anchor=(0.8, 0.5), ncol=1, title='Stav vozovky', fontsize=8,
                fancybox=False, shadow=False, borderpad=None, frameon=False)
 
     if fig_location is not None:
@@ -229,8 +241,12 @@ def plot_surface(df, fig_location=None, show_figure=False):
         plt.show()
 
 
-if __name__ == '__main__':
-    df = get_dataframe()
-    plot_conseq(df, fig_location='part2.png')
-    plot_damage(df, fig_location='part3.png')
-    plot_surface(df, fig_location='part4.png')
+if __name__ == "__main__":
+    pass
+    # zde je ukazka pouziti, tuto cast muzete modifikovat podle libosti
+    # skript nebude pri testovani pousten primo, ale budou volany konkreni ¨
+    # funkce.
+    df = get_dataframe("accidents.pkl.gz")
+    plot_conseq(df, fig_location="01_nasledky.png", show_figure=True)
+    plot_damage(df, "02_priciny.png", True)
+    plot_surface(df, "03_stav.png", True)
