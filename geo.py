@@ -1,13 +1,19 @@
 #!/usr/bin/python3.8
 # coding=utf-8
+"""
+Author: Marek Sarvas
+School: VUT FIT
+Project: IZV
+Description: Script for creating graphs of car crash accidents in and outside city for chosen region.
+"""
+
+
 import pandas as pd
 import geopandas
 import matplotlib.pyplot as plt
 import contextily as ctx
 import sklearn.cluster
 import numpy as np
-# muzeze pridat vlastni knihovny
-
 
 
 def make_geo(df: pd.DataFrame) -> geopandas.GeoDataFrame:
@@ -59,7 +65,7 @@ def plot_cluster(gdf: geopandas.GeoDataFrame, fig_location: str = None, show_fig
     fig = plt.figure(figsize=(20, 8))
     ax = plt.gca()
     
-    gdf_c = gdf.to_crs("EPSG:5514") # spravny system
+    gdf_c = gdf.to_crs("EPSG:5514") # correct system
     gdf_c = gdf_c.set_geometry(gdf_c.centroid).to_crs(epsg=3857)
     
     # plot all accidents
@@ -99,8 +105,7 @@ def plot_cluster(gdf: geopandas.GeoDataFrame, fig_location: str = None, show_fig
 
 
 if __name__ == "__main__":
-    # zde muzete delat libovolne modifikace
     gdf = make_geo(pd.read_pickle("accidents.pkl.gz"))
-    #plot_geo(gdf, "geo1.png", show_figure=True)
+    plot_geo(gdf, "geo1.png", show_figure=True)
     plot_cluster(gdf, "geo2.png", True)
 
