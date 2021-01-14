@@ -41,34 +41,10 @@ def severity_wrt_cause(df, region='CZ', save_fig=None, show_fig=False):
     df = select_region(df, region)
     
     sev_df = pd.DataFrame({'caused_by': df['p10'], 'cause': df['p12'], 'dead': df['p13a'], 'heavily_injured': df['p13b'], 'lightly_injured': df['p13c']})
-    cause_labels = {'1':'nezavineny vodicom', '2': 'neprimerana rychlost', '3': 'nespravne predbiehanie', '4': 'nedanie prednosti v jazde', '5': 'nespravny sposob jazdy', '6': 'technicka zavada'}
-    """
-    caused_by_df = sev_df.groupby('caused_by').cause.agg('count').to_frame('accidents').reset_index()
+    cause_labels = {'1':'nezavineny vodicom', '2': 'neprimerana rychlost', '3': 'nespravne predbiehanie', '4': 'nedanie prednosti v jazde', 
+                    '5': 'nespravny sposob jazdy', '6': 'technicka zavada'}
+    
 
-    # main figure settings
-    sns.set_style("darkgrid")
-    fig, ax = plt.subplots(1, 1)
-
-    fig.set_figwidth(8)
-    fig.set_figheight(10)
-    fig.tight_layout()
-    fig.subplots_adjust(top=0.89)  # adjust space between figure title and first subplot
-    fig.suptitle('Následky nehôd v jednotlivých regiónoch')
-
-    c_pallet = sns.color_palette("mako", n_colors=14)
-
-    # plot each data frame as bar into corresponding subplots
-    sns.barplot(ax=ax, x="caused_by", y="accidents", data=caused_by_df, palette=c_pallet)
-
-   
-    #ax.title.set_text(titles[i])
-    #ax.set(xlabel=None, ylabel='pocet')
-    ax.spines['right'].set_visible(False)
-    ax.spines['top'].set_visible(False)
-
-    fig.tight_layout(pad=2.0)
-    plt.show()
-    """
     # adjust values of accident cause to index cause labels
     sev_df['cause'] = sev_df['cause'].apply(lambda x: cause_labels[str(x//100)])
     
@@ -106,6 +82,8 @@ def severity_wrt_cause(df, region='CZ', save_fig=None, show_fig=False):
    
 
     # set titles, labels and adjust sizes
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
     ax.set_xlabel('pricina nehody', fontsize=8)
     ax.set_ylabel('pocet zranenych ludi', fontsize=8)
     ax.tick_params(axis="x", labelsize=6)
@@ -117,6 +95,50 @@ def severity_wrt_cause(df, region='CZ', save_fig=None, show_fig=False):
     if show_fig:
         plt.show()
 
+
+def accidents_cause(df, region='CZ', save_fig=None, show_fig=False):
+    df = select_region(df, region)
+
+    # create  needed dataframe with values grouped by cause of accident
+    acc_df = pd.DataFrame({'caused_by': df['p10'], 'cause': df['p12'], 'dead': df['p13a'], 'heavily_injured': df['p13b'], 'lightly_injured': df['p13c']})
+    caused_by_df = acc_df.groupby('caused_by').cause.agg('count').to_frame('accidents').reset_index()
+
+    # change "cause_by" column lables to text description
+    caused_by_labels = {'1':'vodicom motor. vozdila', '2': 'vodicom nemotor. vozdila', '3': 'chodcom', '4': 'zverou', '5': 'inym ucastnikom provozu', 
+                        '6': 'zavadou komunikacie', '7': 'zavadou vozidla', '0': 'ine'}
+    
+    caused_by_df['caused_by'] = caused_by_df['caused_by'].apply(lambda x: caused_by_labels[str(x)])
+    
+    print(caused_by_df)
+
+    fig, ax = plt.subplots(1, 1, figsize=(12, 7))
+    fig.subplots_adjust(left=0.17)  # adjust space between figure title and first subplot
+    fig.suptitle('Následky nehôd v jednotlivých regiónoch')
+    
+    # seaborn style
+    sns.set_style("darkgrid")
+    c_pallet = sns.color_palette("mako", n_colors=len(caused_by_labels))
+
+    caused_by_df = caused_by_df.sort_values(['accidents'], ascending=False).reset_index(drop=True)
+
+    # plot number of accidents w.r.t. who caused them
+    sns.barplot(ax=ax, y="caused_by", x="accidents", data=caused_by_df, palette=c_pallet, log=True)
+
+    # annotate each bar with number of accidents
+    for p in ax.patches:
+        ax.annotate(int(p.get_width()), xy=(p.get_width()+p.get_width()/5, p.xy[1]+p.get_height()/2), fontsize=6, ha='center')
+   
+    #ax.title.set_text(titles[i])
+    ax.set(ylabel='Zavinenie', xlabel='Pocet nehod')
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    plt.setp(ax.get_yticklabels(), rotation=30, fontsize=7)
+    plt.minorticks_off()
+
+    if save_fig is not None:
+        plt.savefig(save_fig)
+    if show_fig:
+        plt.show()
 
 # number of accident w.r.t. weather, visibility, surface conditions
 def accidents_wrt_weather(df, region='CZ'):
@@ -134,4 +156,5 @@ def accidents_wrt_weather(df, region='CZ'):
 if __name__ == '__main__':
     df = pd.read_pickle("accidents.pkl.gz")
     df = clean_data(df)
-    severity_wrt_cause(df, save_fig='nasledky_vs_priciny.png', show_fig=True)
+    #severity_wrt_cause(df, save_fig='figures/nasledky_vs_priciny.png', show_fig=True)
+    #accidents_cause(df, show_fig=True, save_fig='figures/priciny_nehod.png')
