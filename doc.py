@@ -26,8 +26,8 @@ def clean_data(df):
                             region
     """
     clean_df = df[['region', 'p10', 'p12', 'p13a', 'p13b', 'p13c', 'p16', 'p18', 'p19']].dropna().copy()
-    #print(clean_df)
     return clean_df
+
 
 def select_region(df, region='CZ'):
     """Select chosen region, if region is not given return same dataframe"""
@@ -36,24 +36,38 @@ def select_region(df, region='CZ'):
     reg_df = df[df.region == region].copy()
     return reg_df
 
+def print_table(df):
+    print(df.to_latex(index=False))
+    
+
 # severity by accident cause
 def severity_wrt_cause(df, region='CZ', save_fig=None, show_fig=False):
+    """Severity of injuries in car accidents w.r.t. accident cause.
+    
+    Show number of injured people for each severity level of injuries in car accidents with respect to cause of accident.
+    Injuries could be: light injuries, severe injuries, death. Plot as barplot for each accident cause with hue representing level
+    of injuries.
+    """
     df = select_region(df, region)
     
-    sev_df = pd.DataFrame({'caused_by': df['p10'], 'cause': df['p12'], 'dead': df['p13a'], 'heavily_injured': df['p13b'], 'lightly_injured': df['p13c']})
+    sev_df = pd.DataFrame({ 'cause': df['p12'], 'dead': df['p13a'], 'severely_injured': df['p13b'], 'lightly_injured': df['p13c']})
     cause_labels = {'1':'nezavineny vodicom', '2': 'neprimerana rychlost', '3': 'nespravne predbiehanie', '4': 'nedanie prednosti v jazde', 
                     '5': 'nespravny sposob jazdy', '6': 'technicka zavada'}
     
 
     # adjust values of accident cause to index cause labels
     sev_df['cause'] = sev_df['cause'].apply(lambda x: cause_labels[str(x//100)])
-    
+    print(sev_df)
     # melt to get severity into one column
-    cause_df = pd.melt(sev_df, id_vars=['cause', 'caused_by'], var_name='severity')
+    cause_df = pd.melt(sev_df, id_vars=['cause'], var_name='severity')
    
     #cause_df = cause_df[cause_df['value'] != 0]
-    #print(cause_df)
+    print()
+    tmp = cause_df.groupby(['cause', 'severity']).agg(people=('value','sum'), accidents=('value', 'count')).reset_index()
+    tmp['percent'] = (tmp.people/tmp.accidents)*100
+    print_table(tmp)
     cause_df = cause_df.groupby(['cause', 'severity']).value.agg('sum').reset_index(name='people')
+    #tmp = cause_df.groupby(['cause', 'severity']).agg(accidents=('value','sum'), people=('value', 'count')).reset_index()
     print(cause_df)
    
     # setup plot
@@ -68,7 +82,7 @@ def severity_wrt_cause(df, region='CZ', save_fig=None, show_fig=False):
     
     # add 1 because of log scale(later subtracted)
     cause_df['people'] = cause_df['people']+1
-    sns.barplot(ax=ax, x="cause", y="people", hue="severity", data=cause_df, palette=c_pallet, log=True)
+    sns.barplot(ax=ax, x="cause", y="people", hue="severity", data=tmp, palette=c_pallet, log=True)
     
     # annotate bars in plot
     for p in ax.patches:
@@ -126,7 +140,7 @@ def accidents_cause(df, region='CZ', save_fig=None, show_fig=False):
 
     # annotate each bar with number of accidents
     for p in ax.patches:
-        ax.annotate(int(p.get_width()), xy=(p.get_width()+p.get_width()/5, p.xy[1]+p.get_height()/2), fontsize=6, ha='center')
+        ax.annotate(int(p.get_width()), xy=(p.get_width()+p.get_width()/5, p.xy[1]+p.get_height()/2), fontsize=7, ha='center')
    
     #ax.title.set_text(titles[i])
     ax.set(ylabel='Zavinenie', xlabel='Pocet nehod')
@@ -140,9 +154,13 @@ def accidents_cause(df, region='CZ', save_fig=None, show_fig=False):
     if show_fig:
         plt.show()
 
+
 # number of accident w.r.t. weather, visibility, surface conditions
-def accidents_wrt_weather(df, region='CZ'):
-    pass
+def weather_accidents(df, region='CZ', save_fig=None, show_fig=False):
+    df = select_region(df, region)
+    print(df)
+    w_df = pd.DataFrame({'caused_by': df['p10'], 'cause': df['p12'], 'visibility': df['p19'], 'weather': df['p18'], 'dead': df['p13a'], 'heavily_injured': df['p13b'], 'lightly_injured': df['p13c']})
+    print(w_df.weather.min())
 
 
 
@@ -150,11 +168,16 @@ def accidents_wrt_weather(df, region='CZ'):
 
 
 
-
+    if save_fig is not None:
+        plt.savefig(save_fig)
+    if show_fig:
+        plt.show()
 
 
 if __name__ == '__main__':
     df = pd.read_pickle("accidents.pkl.gz")
     df = clean_data(df)
-    #severity_wrt_cause(df, save_fig='figures/nasledky_vs_priciny.png', show_fig=True)
+    severity_wrt_cause(df, save_fig='figures/fig.png', show_fig=True)
     #accidents_cause(df, show_fig=True, save_fig='figures/priciny_nehod.png')
+    #accidents_wrt_weather(df)
+    #accidents_wrt_weather(df, save_fig='figures/pocasie.png', show_fig=True)
