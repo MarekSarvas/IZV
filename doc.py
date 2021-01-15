@@ -78,8 +78,8 @@ def severity_wrt_cause(df, accidents, region='CZ', save_fig=None, show_fig=False
 
     # print info
     p_injured = cause_df[cause_df['cause'] != 'nezavineny_vodicom'].people.sum()
-    print('Počet zranených ľudí pri nehode spôsobenej vodičom {}(pri {:2.4}% nehod)'.format(p_injured, (p_injured/accidents)*100))
-    print('Počet usmrtených ľudí pri nehode spôsobenej vodičom {}'.format(cause_df[(cause_df['cause'] != 'nezavineny_vodicom') & (cause_df['severity'] == 'mrtvy')].people.sum()))
+    print('Počet zranených ľudí pri nehode spôsobenej vodičom: {}(pri {:2.4}% nehod)'.format(p_injured, (p_injured/accidents)*100))
+    print('Počet usmrtených ľudí pri nehode spôsobenej vodičom: {}'.format(cause_df[(cause_df['cause'] != 'nezavineny_vodicom') & (cause_df['severity'] == 'mrtvy')].people.sum()))
     print_table(cause_df) 
     
     # setup plot
@@ -100,7 +100,7 @@ def severity_wrt_cause(df, accidents, region='CZ', save_fig=None, show_fig=False
         ax.annotate(int(p.get_height()-1), xy=(p.xy[0]+p.get_width()/2, p.get_y()+p.get_height()), fontsize=6, ha='center')
     
     # create legend
-    labels = ['usmrtení', 'tažko zranení', 'ľahko zranení']
+    labels = ['ľahko zranení', 'usmrtení', 'tažko zranení']
     h, l = ax.get_legend_handles_labels()
     legend = ax.legend(h, labels, title="Závažnosť zranení",loc='upper right', fontsize=10, frameon=False)
     plt.setp(legend.get_title(),fontsize=10)
@@ -185,4 +185,4 @@ if __name__ == '__main__':
     df = pd.read_pickle("accidents.pkl.gz")
     df = clean_data(df)
     accidents = accidents_cause(df, region='JHM')
-    severity_wrt_cause(df, accidents, save_fig='figures/fig.png', show_fig=True, region='JHM')
+    severity_wrt_cause(df, accidents, save_fig='fig.png', show_fig=True, region='JHM')
